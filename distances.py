@@ -17,6 +17,10 @@ from ewm import ewma
 
 
 
+#Normalizing function
+def NORM(to_norm):
+    return np.sqrt(to_norm)/(np.sqrt(to_norm) + 1)
+
         
     
 #The mean of cosine distances between news in chain and argument new
@@ -52,24 +56,28 @@ def Euclidian_measure_to_chain_av(chain, new):
     chain = chain.reshape(chain.shape[0],-1)
     arr = np.linalg.norm(chain - new,axis = 1)
     h = arr.mean()
-    return h
+    normalized = NORM(h)
+    return normalized
 
 #The weighted mean of cosine distances between news in chain and argument new
 def Euclidian_measure_to_chain_w_av(chain, new):
     distances = [np.linalg.norm(np.array(c) - new) for c in chain ]
     m = ewma(np.array(distances))
-    return m[-1]
+    normalized = NORM(m[-1])
+    return normalized
     
 #The EWM of cosine distances between news in chain and argument new
 def Euclidian_measure_to_chain_asMin(chain, new):
         distances = np.array([np.linalg.norm(np.array(c) - new) for c in chain ])
         ans = distances.max()
-        return ans
+        normalized = NORM(ans)
+        return normalized
     
 #The distance from new and chain as cosine measure between new and the last 
 def Euclidian_measure_to_chain_last(chain, new):
     distance = np.linalg.norm(chain[-1] - new)
-    return distance
+    normalized = NORM(distance)
+    return normalized
 
 
 
@@ -80,10 +88,9 @@ def Manhattan_measure_to_chain_av(chain, new):
     new= np.array(new)
     chain = chain.reshape(chain.shape[0],-1)
     arr = np.sum(np.abs(chain - new),axis = 1)
-    #arr = np.array([np.linalg.norm(np.array(c) - new) for c in chain ])
     h = arr.mean()
-    #print(h)
-    return h
+    normalized = NORM(h)
+    return normalized
 
 
 #The weighted mean of cosine distances between news in chain and argument new
@@ -92,9 +99,9 @@ def Manhattan_measure_to_chain_w_av(chain, new):
     new= np.array(new)
     chain = chain.reshape(chain.shape[0],-1)
     arr = np.sum(np.abs(chain - new),axis = 1)
-    #arr = np.array([np.linalg.norm(np.array(c) - new) for c in chain ])
     m = ewma(np.array(arr))
-    return m[-1]
+    normalized = NORM(m[-1])
+    return normalized
     
     
     '''
@@ -106,11 +113,13 @@ def Manhattan_measure_to_chain_w_av(chain, new):
 def Manhattan_measure_to_chain_asMin(chain, new):
         distances = np.array([np.sum(np.abs(np.array(c) - new)) for c in chain ])
         ans = distances.max()
-        return ans
+        normalize = NORM(ans)
+        return normalize
 #The distance from new and chain as cosine measure between new and the last 
 def Manhattan_measure_to_chain_last(chain, new):
     distance = np.sum(np.abs(np.array(chain[-1]) - new))
-    return distance
+    normalize = NORM(distance)
+    return normalize
 
 
 
@@ -121,26 +130,30 @@ def KL_measure_to_chain_av(chain, new):
     chain = chain.reshape(chain.shape[0],-1)
     Sum = np.array([entropy(np.array(c), new) for c in chain ]).sum()
     Sum/= len(chain)
-    return Sum
+    normalize = NORM(Sum)
+    return normalize
 
 #The weighted mean of KL-Divergence  between news in chain and argument new
 def KL_measure_to_chain_w_av(chain, new):
     chain = chain.reshape(chain.shape[0],-1)
     distances = [entropy(np.array(c) ,new) for c in chain ]
     m = ewma(np.array(distances))
-    return m[-1]
+    normalized = NORM(m[-1])
+    return normalized
     
 #The EWM of KL-Divergence  between news in chain and argument new
 def KL_measure_to_chain_asMin(chain, new):
         chain = chain.reshape(chain.shape[0],-1)
         distances = np.array([entropy(np.array(c), new) for c in chain ])
         ans = distances.max()
-        return ans
+        normalized = NORM(ans)
+        return normalized
 #The distance from new and chain as KL-Divergence  between new and the last 
 def KL_measure_to_chain_last(chain, new):
     chain = chain.reshape(chain.shape[0],-1)
     distance = entropy(chain[-1],new)
-    return distance
+    normalized = NORM(distance)
+    return normalized
 
 
 

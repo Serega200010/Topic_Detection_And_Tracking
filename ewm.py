@@ -4,7 +4,7 @@ Created on Thu Feb 18 16:40:04 2021
 
 @author: Sergei
 """
-
+import numpy as np
 def ewma(data, window = 4):
 
     alpha = 2 /(window + 1.0)
