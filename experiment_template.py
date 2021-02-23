@@ -37,6 +37,8 @@ def stemm_tokenizer(text: str, stemmer, tknzr) -> str:
     stemmed_text = ' '.join([stemmer.stem(w) for w in tknzr.tokenize(cleaned_text) if w.isalpha()])
     return stemmed_text
 
+
+
 class Experiment:
     """
     Класс-шаблон для создания своих экспериментов.
@@ -53,7 +55,7 @@ class Experiment:
         self.dist_matr = None
         self.thresh = thresh
 
-    def dist_func(self, dist_vec: np.array, chain_vecs: np.ndarray) -> float:
+    def dist_func(self, dist_vec: np.array) -> float:
         """
         Функция расстояния от очередной новости до цепочки
         :param dist_vec: Вектор расстояний от очередной новости до новостей в цепочке 
@@ -86,7 +88,7 @@ class Experiment:
     def find_chain(self, new_i, new_ind):
         dist_arr = np.zeros(len(self.chains_list))
         for chain_i, chain in enumerate(self.chains_list):
-            dist = self.dist_func(self.dist_matr[new_i], self.chains_list[chain_i])
+            dist = self.dist_func(self.dist_matr[new_i, self.chains_list[chain_i]])
             dist_arr[chain_i] = dist
 
         if dist_arr.size == 0:
@@ -117,14 +119,13 @@ class Experiment:
         
         if self.X is None or self.dist_matr is None:
             self.compute_distances()
-        
+            print('The new distance matrix was succesfully built')
         self.le.fit(self.data.index)
         for i, ind in enumerate(self.data.index):
             self.find_chain(i, ind)
             
         self.chains_list = [self.le.inverse_transform(chain) for chain in self.chains_list]
         return self.chains_list
-    
     
 
 
@@ -156,14 +157,15 @@ class Experiment:
 """
 
 
-    
+def NORM(to_norm):
+    return np.sqrt(to_norm)/(np.sqrt(to_norm) + 1)
     
 class MyExperiment(Experiment):
-    def __init__(self, data, tfidf, spec = "Cos_Mean", treshold = 1):
-        super().__init__(data, treshold) # задаем порог
+    def __init__(self, data, tfidf, spec = "Cos_Mean", threshold = 1):
+        super().__init__(data, threshold) # задаем порог
         self.tfidf = tfidf
         self.spec = spec
-        self.treshold = treshold
+        self.threshold = threshold
         self.Spec_dict = {'Cos_Mean' : Cosine_measure_to_chain_av,
                           'Cos_WMean': Cosine_measure_to_chain_w_av,
                           'Cos_Min'  : Cosine_measure_to_chain_asMin,
@@ -179,10 +181,10 @@ class MyExperiment(Experiment):
                           'Man_Min'  : Manhattan_measure_to_chain_asMin,
                           'Man_Last' : Manhattan_measure_to_chain_last,
                          
-                          'KL_Mean' : KL_measure_to_chain_av,
-                          'KL_WMean': KL_measure_to_chain_w_av,
-                          'KL_Min'  : KL_measure_to_chain_asMin,
-                          'KL_Last' : KL_measure_to_chain_last}
+                          'KL__Mean' : KL_measure_to_chain_av,
+                          'KL__WMean': KL_measure_to_chain_w_av,
+                          'KL__Min'  : KL_measure_to_chain_asMin,
+                          'KL__Last' : KL_measure_to_chain_last}
         if self.spec[0:3] == 'Cos':
             self.func = lambda u,v: cosine(u,v)
         
@@ -192,13 +194,22 @@ class MyExperiment(Experiment):
         if self.spec[0:3] == 'Man':
             self.func = lambda u,v: np.sum(np.abs(u - v))      
 
-        if self.spec[0:3] == 'KL':
+        if self.spec[0:3] == 'KL_':
             self.func = lambda u,v: entropy(u - v)     
         self.result = {}
     
     # определяем свою функцию dist_func
-    def dist_func(self, new_vec, chain_vecs):
-        return self.Spec_dict[self.spec](chain_vecs,new_vec)
+    def dist_func(self, dist_vec):
+        case = self.spec[4:]
+        if case == 'Mean':
+            ans =  dist_vec.mean()
+        if case == 'WMean':
+            ans =  ewma(dist_vec)
+        if case == 'Min':
+            ans = dist_vec.min()
+        if case == 'Last':
+            ans = dist_vec[-1]
+        return NORM(ans)
     
     def new_spec(self, spec = 'Cos_Mean'):
         self.spec = spec
@@ -210,12 +221,12 @@ class MyExperiment(Experiment):
         return vect_arr
     
     def make_dist_matr(self, X):
-        return sklearn.metrics.pairwise_distances(X,X, metric = self.func)
+        return sklearn.metrics.pairwise_distances(X, metric = self.func)
     
-    def run(self):
-        chain_list = self.create_chains()
+    def run(self,thresh = 0.1):
+        chain_list = self.create_chains(thresh)
         self.result = {'Specification' : self.spec,
-                       'Treshold' : self.treshold,
+                       'Threshold' : thresh,
                        'Num of news' : self.data.shape[0],
                        'Num of chains' : len(chain_list),
                        'Max chain length' : max([len(c) for c in chain_list]),
